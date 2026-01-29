@@ -1,0 +1,25 @@
+[project]
+name = "scraping-libraries"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiohttp>=3.13.3",
+    "asyncio>=4.0.0",
+    "beautifulsoup4>=4.14.3",
+    "fake-useragent>=2.2.0",
+    "ipykernel>=7.1.0",
+    "lxml[html-clean]>=6.0.2",
+    "notebook>=7.5.3",
+    "playwright>=1.57.0",
+    "requests>=2.32.5",
+    "requests-html>=0.10.0",
+    "selenium>=4.40.0",
+]
+
+[dependency-groups]
+dev = [
+    "types-beautifulsoup4>=4.12.0.20250516",
+    "types-requests>=2.32.4.20260107",
+]
