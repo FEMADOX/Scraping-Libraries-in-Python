@@ -9,4 +9,3 @@ wheels/
 # Virtual environments
 .venv
 .idea
-Code_Examples_spiders/*
