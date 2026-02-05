@@ -38,14 +38,16 @@ async def set_up(browser: Browser, url: str) -> Page:
         viewport={"width": 1920, "height": 1080},
     )
     page = await context.new_page()
-    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
-    # Decline/Accept cookies if prompted
-    try:
-        logger.info("Handling cookies...")
-        await page.click("button:has-text('Rechazar todas')", timeout=40000)
-    except Exception:
-        logger.exception("No cookie prompt found or error clicking the button.")
+    cookie_button = page.locator("button:has-text('Rechazar todas')")
+
+    async def handle_cookie_overlay() -> None:
+        logger.info("Cookie banner detected by handler. Handling cookies...")
+        await cookie_button.click()
+
+    await page.add_locator_handler(cookie_button, handle_cookie_overlay)
+
+    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
     return page
 
