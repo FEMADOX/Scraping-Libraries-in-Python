@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from playwright.async_api import Browser, Page
 
-# Configurar logging
+# Config logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
