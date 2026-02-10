@@ -4,11 +4,9 @@ from typing import TYPE_CHECKING, cast
 
 import pandas as pd
 from bs4 import BeautifulSoup, Tag
-from playwright.async_api import async_playwright
+from playwright.async_api import Playwright, async_playwright
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from playwright.async_api import Browser, Page
 
 # Config logging
@@ -18,273 +16,288 @@ logger = logging.getLogger(__name__)
 URL = "https://www.dia.es/freidora-de-aire-airfryer/c/L125"
 
 
-async def set_up(browser: Browser, url: str) -> Page:
-    """Set up a new browser page with specific configurations and navigates to url.
+class DiaScraper:
+    """A class to scrape product information from the DIA supermarket website.
 
-    This asynchronous function creates a new browser context with a predefined viewport
-    size (1920x1080), opens a new page, and navigates to the specified URL. It attempts
-    to handle cookie consent dialogs by clicking a 'Rechazar todas' button
-    if one appears within a short timeout.
+    This class provides methods to set up a browser page, extract category URLs from the
+    sidebar, and scrape product details such as name, price, and price per unit. It
+    handles dynamic content loading by scrolling through the page until all products are
+    loaded.
 
-    Args:
-        browser (Browser): The Playwright Browser instance.
-        url (str): The target URL to navigate to.
-
-    Returns:
-        Page: The initialized Playwright Page object ready for interaction.
-
-    """
-    context = await browser.new_context(
-        viewport={"width": 1920, "height": 1080},
-    )
-    page = await context.new_page()
-
-    cookie_button = page.locator("button:has-text('Rechazar todas')")
-
-    async def handle_cookie_overlay() -> None:
-        logger.info("Cookie banner detected by handler. Handling cookies...")
-        await cookie_button.click()
-
-    await page.add_locator_handler(cookie_button, handle_cookie_overlay)
-
-    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-
-    return page
-
-
-async def get_full_urls_from_sidebar(page: Page) -> list[str]:
-    """Extract full URLs from the sidebar of a DIA supermarket page.
-
-    This function iterates through the sidebar category elements, simulating clicks to
-    reveal hidden sub-categories. It then parses the HTML content to find specific
-    links within those sub-categories that match defined criteria
-    (excluding "Todo" items).
-
-    Args:
-        page (Page): The Playwright Page object representing the current browser tab.
-
-    Returns:
-        list[str]: A list of full URLs valid for scraping or further processing.
-                   Note: Based on the implementation, this might return a nested list
-                   structure (list[list[str]]) depending on how the `hrefs` are appended
+    Methods:
+        set_up: Initializes a new browser page and navigates to the specified URL.
+        get_full_urls_from_sidebar: Extracts full URLs of product categories from
+            the sidebar.
+        extract_products_from_page: Scrapes product information from a given page.
+        iter_through_urls: Iterates through a list of URLs to extract product data.
 
     """
-    # Iter through sidebar to get categories links
-    sidebar = page.locator("div.categories-layout__left-content__list")
-    categories_list_elements = sidebar.locator(
-        "li[data-test-id='categories-list-element']",
-    )
 
-    count = await categories_list_elements.count()
+    def __init__(self, url: str = URL, headless: bool = False) -> None:
+        """Initialize the scraper with a target URL and headless mode setting."""
+        self.url = url
+        self.headless = headless
+        self.playwright: Playwright | None = None
+        self.browser: Browser | None = None
+        self.results: list[dict[str, str]] = []
 
-    full_urls = []
+    async def start(self) -> None:
+        """Inicialize Playwright and launch the browser."""
+        self.playwright = await async_playwright().start()
+        self.browser = await self.playwright.chromium.launch(headless=self.headless)
+        logger.info("Browser Launched.")
 
-    for number in range(count):
-        element = categories_list_elements.nth(number)
-        await element.scroll_into_view_if_needed()
+    async def close(self) -> None:
+        """Close the browser and stop Playwright."""
+        if self.browser:
+            await self.browser.close()
+            logger.info("Browser Closed.")
+        if self.playwright:
+            await self.playwright.stop()
+            logger.info("Playwright Stopped.")
 
-        try:
-            await element.hover()
-            expand_button = element.locator(
-                "span.dia-icon-plus.category-item__symbol-icon",
-            )
-            expand_button_visible = element.locator(
-                "span.category-item__symbol-icon.dia-icon-minus.category-item__symbol-icon--visible",
-            )
+    async def _create_page(self, url: str) -> Page:
+        """Create and set up a new browser page.
 
-            if await expand_button.is_visible():
-                await expand_button.click(timeout=1500)
-            elif expand_button_visible.is_visible():
-                logger.info(f"Element {number} already expanded.")
-        except Exception:
-            logger.exception(f"Could not click button for element {number}")
-
-        element_html = await element.inner_html()
-        soup = BeautifulSoup(element_html, "lxml")
-
-        sub_category_list = cast(
-            "Tag",
-            soup.find("ul", {"data-test-id": "sub-categories-list"}),
-        )
-
-        if sub_category_list:
-            links = sub_category_list.find_all(
-                lambda tag: (
-                    tag.name == "a"
-                    and "sub-category-item__link" in tag.get("class", [])
-                    and tag.find("span")
-                    and not tag.find_all("span")[1].text.strip().startswith("Todo")
-                ),  # pyright: ignore[reportArgumentType]
-            )
-
-            hrefs = [link.get("href") for link in links]
-            current_urls = [f"https://www.dia.es{href}" for href in hrefs if href]
-            full_urls.extend(current_urls)
-
-    await page.close()
-
-    return full_urls
-
-
-async def extract_products_from_page(page: Page) -> list[dict[str, Any]]:
-    """Extract product info from a Playwright page object by scrolling to load content.
-
-    This function continuously scrolls down the page until no new content is loaded,
-    scraping product details (name, price, unit price) from HTML list items using
-    BeautifulSoup. It handles duplicate products based on their names.
-
-    Args:
-        page (Page): The Playwright Page object representing the current browser tab.
-
-    Returns:
-        list[dict[str, Any]]: A list of dictionaries, where each dictionary represents
-                            a unique product and contains keys for '#', 'name', 'price'
-                            and 'price_per_unit'.
-
-    """
-    products = []
-    added_products = set()
-    reached_end = False
-
-    # for _ in range(3):
-    while not reached_end:
-        content = await page.content()
-        soup = BeautifulSoup(content, "lxml")
-        containers = soup.find_all("li", class_="product-card-list__item-container")
-
-        for container in containers:
-            name = container.find("p", class_="search-product-card__product-name")
-            price = container.find("p", class_="search-product-card__active-price")
-            price_per_unit = container.find(
-                "p",
-                class_="search-product-card__price-per-unit",
-            )
-
-            if not name and not price and not price_per_unit:
-                continue
-
-            name = name.text.strip()
-
-            if name in added_products:
-                continue
-
-            price = price.text.replace("\xa0", "")
-            price_per_unit = price_per_unit.text.replace("\xa0", "").strip("() ")
-
-            products.append({
-                "#": len(products) + 1,
-                "name": name,
-                "price": price,
-                "price_per_unit": price_per_unit,
-            })
-
-        previous_height = await page.evaluate("document.body.scrollHeight")
-
-        await page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
-        await asyncio.sleep(2)
-
-        new_height = await page.evaluate("document.body.scrollHeight")
-
-        reached_end = new_height == previous_height
-
-    return products
-
-
-async def iter_through_urls(
-    urls: list[str],
-    browser: Browser,
-) -> list[dict[str, Any]] | list[None]:
-    """Iterate through all the urls inside a list to extract the info.
-
-    This function uses Playwright to open each URL in a new browser page,
-    extracts product information by calling the `extract_products_from_page` function
-    and return the number of products found on each page.
-
-    Args:
-        urls (list[str]): List of URLs to iterate through.
-        browser (Browser): The Playwright Browser instance to use for opening pages.
-
-    Returns:
-        list: A combined list of products extracted from all the URLs.
-
-    """
-    total_products = []
-
-    semaphore = asyncio.Semaphore(1)
-
-    async def worker(url: str) -> list[dict[str, Any]] | None:
-        """Process each URL with concurrency control.
-
-        Args:
-            url (str): The URL to process.
+        This asynchronous method creates a new browser context with a predefined
+        viewport size (1920x1080), opens a new page, and attempts to handle cookie
 
         Returns:
-            list[dict[str, Any]] | None: A list of products extracted from the page
+            Page: The initialized Playwright Page object ready for interaction.
+
+        Raises:
+            RuntimeError: If the browser is not initialized before calling this method.
 
         """
-        async with semaphore:
-            logger.info(f"Processing URL: {url}")
+        if not self.browser:
+            msg = "Browser is not initialized. Call start() first."
+            raise RuntimeError(msg)
 
-            try:
-                page = await set_up(browser, url)
+        context = await self.browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+        )
+        page = await context.new_page()
 
-                products = await extract_products_from_page(page)
-                logger.info(f"Found {len(products)} products on the page.")
+        cookie_button = page.locator("button:has-text('Rechazar todas')")
 
-                await page.close()
-                return products
-            except Exception:
-                logger.exception(f"Error processing URL: {url}")
-                return []
+        async def handle_cookie_overlay() -> None:
+            logger.info("Cookie banner detected by handler. Handling cookies...")
+            await cookie_button.click()
 
-    tasks = [worker(url) for url in urls]
-    results = await asyncio.gather(*tasks)
+        await page.add_locator_handler(cookie_button, handle_cookie_overlay)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        return page
 
-    for product_list in results:
-        total_products.extend(product_list or [])
+    async def get_category_urls(self) -> list[str]:
+        """Extract full URLs of product categories from the sidebar.
 
-    return total_products
+        This method creates a new page, navigates to the specified URL, and iterates
+        through the sidebar category elements. It simulates clicks to reveal hidden
+        sub-categories and parses the HTML content to find specific links within those
+        sub-categories that match defined criteria (excluding "Todo" items).
 
+        Returns:
+            list[str]: A list of full URLs for the product categories.
 
-async def main() -> list[Any]:
-    """Orchestrate the scraping process.
+        """
+        page = await self._create_page(self.url)
+        full_urls = []
 
-    This function initializes the Playwright browser, sets up the initial page context,
-    extracts category URLs from the sidebar, iterates through these URLs to collect
-    product data, and finally cleans up by closing the browser.
+        try:
+            sidebar = page.locator("div.categories-layout__left-content__list")
+            categories = sidebar.locator("li[data-test-id='categories-list-element']")
+            count = await categories.count()
 
-    Returns:
-        list[Any]: A list containing the scraped product data.
+            for i in range(count):
+                element = categories.nth(i)
+                await element.scroll_into_view_if_needed()
 
-    """
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+                # Intentar expandir categoría
+                try:
+                    await element.hover()
+                    expand_btn = element.locator(
+                        "span.dia-icon-plus.category-item__symbol-icon",
+                    )
+                    expand_btn_visible = element.locator(
+                        "span.category-item__symbol-icon.dia-icon-minus.category-item__symbol-icon--visible",
+                    )
+                    if await expand_btn.is_visible():
+                        await expand_btn.click(timeout=1500)
+                    elif await expand_btn_visible.is_visible():
+                        logger.info(f"Element {i} already expanded.")
+                except Exception:
+                    logger.exception(f"Could not click expand button for element {i}")
 
-        logger.info("Setting up page...")
-        page = await set_up(browser, URL)
+                # Parsear HTML
+                element_html = await element.inner_html()
+                soup = BeautifulSoup(element_html, "lxml")
+                sub_category_list = cast(
+                    "Tag",
+                    soup.find("ul", {"data-test-id": "sub-categories-list"}),
+                )
 
-        logger.info("Extracting urls from sidebar...")
-        full_urls = await get_full_urls_from_sidebar(page)
+                if sub_category_list:
+                    links = sub_category_list.find_all(
+                        lambda tag: (
+                            tag.name == "a"
+                            and "sub-category-item__link" in tag.get("class", [])
+                            and not tag
+                            .find_all("span")[1]
+                            .text.strip()
+                            .startswith("Todo")
+                        ),
+                    )
+                    full_urls.extend([
+                        f"https://www.dia.es{link.get('href')}" for link in links
+                    ])
+        finally:
+            await page.close()
 
-        logger.info("Iterating through urls and extracting products data...")
-        products = await iter_through_urls(full_urls, browser)
+        return full_urls
 
-        await browser.close()
+    async def scrape_products(self, url: str) -> list[dict]:
+        """Extract full URLs from the sidebar of a DIA supermarket page.
+
+        This method iterates through the sidebar category elements, simulating clicks to
+        reveal hidden sub-categories. It then parses the HTML content to find specific
+        links within those sub-categories that match defined criteria
+        (excluding "Todo" items).
+
+        Args:
+            url (str): The url of the page to scrape products from.
+
+        Returns:
+            list[str]: A list of full URLs valid for scraping or further processing.
+                Note: Based on the implementation, this might return a nested list
+                structure (list[list[str]]) depending on how the `hrefs` are appended
+
+        """
+        page = await self._create_page(url)
+        products = []
+        seen_products = set()
+
+        try:
+            last_height = await page.evaluate("document.body.scrollHeight")
+            while True:
+                content = await page.content()
+                soup = BeautifulSoup(content, "lxml")
+                items = soup.find_all("li", class_="product-card-list__item-container")
+
+                for item in items:
+                    name_tag = item.find(
+                        "p",
+                        class_="search-product-card__product-name",
+                    )
+                    if not name_tag:
+                        continue
+
+                    name = name_tag.text.strip()
+                    if name in seen_products:
+                        continue
+                    seen_products.add(name)
+
+                    price_tag = item.find(
+                        "p",
+                        class_="search-product-card__active-price",
+                    )
+                    unit_tag = item.find(
+                        "p",
+                        class_="search-product-card__price-per-unit",
+                    )
+
+                    price = price_tag.text.replace("\xa0", "") if price_tag else "N/A"
+                    unit = (
+                        unit_tag.text.replace("\xa0", "").strip("() ")
+                        if unit_tag
+                        else "N/A"
+                    )
+
+                    products.append({
+                        "#": len(products) + 1,
+                        "name": name,
+                        "price": price,
+                        "price_per_unit": unit,
+                    })
+
+                # Scroll logic
+                await page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
+                await asyncio.sleep(2)
+
+                new_height = await page.evaluate("document.body.scrollHeight")
+                if new_height == last_height:
+                    break
+                last_height = new_height
+
+        except Exception:
+            logger.exception(f"Error scraping {url}")
+        finally:
+            await page.close()
 
         return products
 
+    async def run(self, workers: int = 3) -> list[dict]:
+        """Orchestrate the scraping process.
+
+            This method initializes the scraping process by starting the browser,
+            fetching category URLs, and iterating through those URLs
+            to extract product data. It ensures that the browser is properly
+            closed after the operation, even if errors occur.
+
+        Args:
+            workers (int, optional): The number of concurrent tasks to run.
+
+        Returns:
+            list[dict]: A list of dictionaries containing the scraped product data.
+
+        """
+        await self.start()
+        try:
+            logger.info("Fetching categories...")
+            urls = await self.get_category_urls()
+            logger.info(f"Check: found {len(urls)} category URLs.")
+
+            # Controled concurrency
+            semaphore = asyncio.Semaphore(workers)
+
+            async def worker(url: str) -> list[dict] | None:
+                async with semaphore:
+                    logger.info(f"Scraping: {url}...")
+                    return await self.scrape_products(url)
+
+            tasks = [worker(url) for url in urls]
+            results = await asyncio.gather(*tasks)
+
+            flat_results = [item for sublist in results if sublist for item in sublist]
+            self.results = flat_results
+            return flat_results
+
+        finally:
+            await self.close()
+
+    def save_to_csv(self, filename: str = "dia_products.csv") -> None:
+        """Save the scraped product results to a CSV file.
+
+        This method converts the stored results into a pandas DataFrame and saves it
+        to a CSV file with a custom index starting at 1.
+
+        Args:
+            filename (str, optional): The output filename for the CSV file.
+                Defaults to "dia_products.csv".
+
+        """
+        if not self.results:
+            logger.warning("No results to save.")
+            return
+
+        df = pd.DataFrame(self.results, index=[item["#"] for item in self.results])
+        df.to_csv(filename, index_label="#")
+        logger.info(f"Saved {len(df)} products to {filename}")
+
 
 if __name__ == "__main__":
-    products = asyncio.run(main())
-    df = pd.DataFrame(products, index=[product["#"] for product in products])
-
-    df = df.drop(columns=["#"])
-    df = df.rename(
-        columns={
-            "name": "Product Name",
-            "price": "Price",
-            "price_per_unit": "Price per Unit",
-        },
+    scraper = DiaScraper(
+        url=URL,
+        headless=False,
     )
-
-    df.to_csv("dia_products.csv", index_label="#")
+    asyncio.run(scraper.run())
+    scraper.save_to_csv()
