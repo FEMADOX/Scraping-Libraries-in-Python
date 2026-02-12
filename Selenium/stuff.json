@@ -1,0 +1,61 @@
+[
+  {
+    "domain": ".tripadvisor.es",
+    "expiry": 1801873562,
+    "httpOnly": false,
+    "name": "datadome",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "rP3kSu8eDSBiLOy7mCzTX6lN~9TiMCJ0ySHvib1xsCln2RMQwKAKgISFuuTh2R4h02w0U6KEmPD03RwONT7tIGTgHPU_s8TQ_Vc6oYNvYa4fedxQ9bIl~p8zPNA8NGm4"
+  },
+  {
+    "domain": ".tripadvisor.es",
+    "expiry": 1805329562,
+    "httpOnly": true,
+    "name": "TAUnique",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "%1%enc%3A1g2EKyvgCSo7Hz%2BLHsJg%2F6GjlzpO5zvW7wAu%2BjGLRpY5F6DLot2VX1F2ONpGNqSNNox8JbUSTxk%3D"
+  },
+  {
+    "domain": ".www.tripadvisor.es",
+    "expiry": 1770771362,
+    "httpOnly": false,
+    "name": "TASID",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "C3877196851719DBAAB63EA1FB704882"
+  },
+  {
+    "domain": ".tripadvisor.es",
+    "httpOnly": false,
+    "name": "example_cookie_name",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "example_cookie_value"
+  },
+  {
+    "domain": ".www.tripadvisor.es",
+    "expiry": 1770773162,
+    "httpOnly": true,
+    "name": "__vt",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "1e-4bJdwI2waMIUaABQCT24E-H_BQo6gx1APGQJPtztr53dvT4sxA-GLMe35XRLX7P5RKHZnQiq-ofaAyROrSINH5U7N7K-crG7wYhKQwDp4sYLQU9kXRIP40clivyeh4B0SGzhGAFm6P7Hd4VoYtVziPA"
+  },
+  {
+    "domain": "www.tripadvisor.es",
+    "expiry": 1805329487,
+    "httpOnly": true,
+    "name": "TAUnique",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "%1%enc%3A1g2EKyvgCSo7Hz%2BLHsJg%2F6GjlzpO5zvW7wAu%2BjGLRpY5F6DLot2VX1F2ONpGNqSNNox8JbUSTxk%3D"
+  }
+]

@@ -10,7 +10,7 @@ dependencies = [
     "asyncio>=4.0.0",
     "beautifulsoup4>=4.14.3",
     "fake-useragent>=2.2.0",
-    "ipykernel>=7.1.0",
+    "ipykernel==7.2.0",
     "jupyter>=1.1.1",
     "lxml[html-clean]>=6.0.2",
     "nest-asyncio>=1.6.0",
@@ -21,9 +21,8 @@ dependencies = [
     "requests>=2.32.5",
     "requests-html>=0.10.0",
     "selenium>=4.40.0",
-    "ty>=0.0.14",
     "undetected-chromedriver>=3.5.5",
-    "websockets==10.4",
+    "websockets==16.0",
 ]
 
 [dependency-groups]
