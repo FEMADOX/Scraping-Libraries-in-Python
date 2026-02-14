@@ -1033,6 +1033,22 @@ wheels = [
 ]
 
 [[package]]
+name = "mechanicalsoup"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "certifi" },
+    { name = "lxml" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/6c/c7cdd19798444f0239a7b9e3ff6afea28bb73d5a040f8f9d369717d45077/mechanicalsoup-1.4.0.tar.gz", hash = "sha256:dce8a797635a748c4724471b5ebee5b1be42531a8464ed4a955e9a46cf612a4c", size = 51131 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4e/61/969eee3b34e39aa7810608e3d1932b555fa535cffa743cba6498b054453c/mechanicalsoup-1.4.0-py3-none-any.whl", hash = "sha256:f460febdffabe24cc36b96dec420def2b30297c6d4663ab33c74e5b67787592d", size = 20051 },
+]
+
+[[package]]
 name = "mistune"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1754,6 +1770,7 @@ dependencies = [
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "lxml", extra = ["html-clean"] },
+    { name = "mechanicalsoup" },
     { name = "nest-asyncio" },
     { name = "notebook" },
     { name = "pandas" },
@@ -1784,6 +1801,7 @@ requires-dist = [
     { name = "ipykernel", specifier = "==7.2.0" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "lxml", extras = ["html-clean"], specifier = ">=6.0.2" },
+    { name = "mechanicalsoup", specifier = ">=1.4.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "notebook", specifier = ">=7.5.3" },
     { name = "pandas", specifier = ">=3.0.0" },

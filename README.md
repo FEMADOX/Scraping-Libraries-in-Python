@@ -22,6 +22,7 @@ The repository is organized by technology and script type:
 - `Beautiful Soup/`: Examples focused on cleaning and extracting static data.
 - `Selenium/`: Scripts requiring browser interaction (clicks, scrolling, forms).
 - `Playwright Project/`: Implementations using Microsoft's modern browser automation engine.
+- `Async/`: Examples of asynchronous programming and scraping for improved performance.
 - `main.ipynb`: Jupyter Notebook for interactive testing, data visualization, and rapid prototyping.
 
 ## 🚀 Installation
