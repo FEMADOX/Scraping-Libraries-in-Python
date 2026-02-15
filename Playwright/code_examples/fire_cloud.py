@@ -66,9 +66,6 @@ class FireCloudScraper:
         await submit_input.click()
 
         await asyncio.sleep(5)
-        # await submit_input.click()
-
-        # await
 
 
 if __name__ == "__main__":
