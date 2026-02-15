@@ -1,9 +1,9 @@
 import logging
 from typing import TYPE_CHECKING, Self
 
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+from selenium import webdriver
 from Selenium.project.booking.constants import BASE_URL
 from Selenium.project.booking.filtration import BookingFiltration
 from Selenium.project.booking.report import BookingReport
