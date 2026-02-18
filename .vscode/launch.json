@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            // "cwd": "${fileDirname}",
+            "env": {
+                "PLAYWRIGHT_HEADLESS": "false"
+            }
+        },
+        // Javascript Debug Conf
+        {
+            "name": "Chrome: Attach to Playwright",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "webRoot": "${workspaceFolder}",
+            "address": "localhost",
+            "sourceMapPathOverrides": {
+                "*": "${workspaceFolder}/Playwright/js_files/*"
+            }
+        },
+    ],
+    "compounds": [
+        {
+            "name": "Debug Python + JS",
+            "configurations": ["Python: Current File", "Chrome: Attach to Playwright"]
+        }
+    ]
+}

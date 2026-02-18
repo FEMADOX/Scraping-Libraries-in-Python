@@ -1,42 +1,60 @@
 [project]
+description = "Collection of Python libraries for web scraping, including tools for handling HTTP requests, parsing HTML, browser automation, and more."
 name = "scraping-libraries"
-version = "0.1.0"
-description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
+version = "2026.2.3"
 dependencies = [
-    "aiofiles>=25.1.0",
-    "aiohttp>=3.13.3",
-    "asyncio>=4.0.0",
-    "beautifulsoup4>=4.14.3",
-    "fake-useragent>=2.2.0",
-    "ipykernel==7.2.0",
-    "jupyter>=1.1.1",
-    "lxml[html-clean]>=6.0.2",
-    "mechanicalsoup>=1.4.0",
-    "nest-asyncio>=1.6.0",
-    "notebook>=7.5.3",
-    "pandas>=3.0.0",
-    "pandas-stubs~=3.0.0",
-    "playwright>=1.57.0",
-    "requests>=2.32.5",
-    "requests-html>=0.10.0",
-    "selenium>=4.40.0",
-    "undetected-chromedriver>=3.5.5",
-    "websockets==16.0",
+  "aiofiles>=25.1.0",
+  "aiohttp>=3.13.3",
+  "asyncio>=4.0.0",
+  "beautifulsoup4>=4.14.3",
+  "fake-useragent>=2.2.0",
+  "ipykernel==7.2.0",
+  "jupyter>=1.1.1",
+  "lxml[html-clean]>=6.0.2",
+  "mechanicalsoup>=1.4.0",
+  "nest-asyncio>=1.6.0",
+  "notebook>=7.5.3",
+  "pandas>=3.0.0",
+  "pandas-stubs~=3.0.0",
+  "playwright>=1.58.0",
+  "requests>=2.32.5",
+  "requests-html>=0.10.0",
+  "selenium>=4.40.0",
+  "undetected-chromedriver>=3.5.5",
+  "websockets==16.0",
 ]
+authors = [
+  {name = "Giancarlos", email = "leyvagiancarlosgonzalez@gmail.com"},
+]
+maintainers = [
+  {name = "Giancarlos", email = "leyvagiancarlosgonzalez@gmail.com"}
+]
+
+[project.urls]
+Documentation = "https://https://github.com/FEMADOX/Scraping-Libraries-in-Python/blob/main/README.md"
+Repository = "https://github.com/FEMADOX/Scraping-Libraries-in-Python"
+"Bug Tracker" = "https://github.com/FEMADOX/Scraping-Libraries-in-Python/issues"
 
 [dependency-groups]
 dev = [
-    "ruff>=0.14.14",
-    "ty>=0.0.14",
-    "types-beautifulsoup4>=4.12.0.20250516",
-    "types-requests>=2.32.4.20260107",
+  "ruff>=0.14.14",
+  "ty>=0.0.14",
+  "types-beautifulsoup4>=4.12.0.20250516",
+  "types-requests>=2.32.4.20260107",
+]
+
+[tool.ruff.lint]
+ignore = [
+  "T201", # Ignore print statements for debugging purposes
+  "D103", # Ignore missing docstring in public function
+  "F811", # Ignore redefinition of unused variable (e.g., in Jupyter notebooks)
 ]
 
 [tool.ty]
-src.exclude = ["./.venv/**"]
 environment.root = ["./.venv"]
+src.exclude = ["./.venv/**"]
 
 [tool.ty.rules]
 unresolved-import = "ignore"

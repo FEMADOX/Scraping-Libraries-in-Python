@@ -34,5 +34,12 @@ This project manages its dependencies using modern tooling.
 uv sync
 ```
 
+## 🐛 Debugging & Development
+
+- Use the provided `launch.json` configurations to debug `JavaScript`/`Python` files directly in VSCode.
+- For Playwright scripts, ensure you have the necessary browsers installed and configured.
+- Use the `debugger` statement in JavaScript files to trigger DevTools for inspecting event listeners and other dynamic behaviors.
+- I've create a compound debug configuration in `launch.json` to allow simultaneous debugging of both Python and JavaScript files (Debug Python + JS) inside the IDE, which is especially useful for Playwright scripts that interact with browser DevTools.
+
 ---
 *Educational project for mastering data extraction techniques in Python.*
